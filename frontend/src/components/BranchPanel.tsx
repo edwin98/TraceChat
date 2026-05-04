@@ -65,7 +65,8 @@ export function BranchPanel() {
 
   useEffect(() => {
     if (!activeBranchId) return;
-    if (branches[activeBranchId]) return;
+    const hasMessages = branchMessages[activeBranchId] !== undefined;
+    if (branches[activeBranchId] && hasMessages) return;
     loadBranch(activeBranchId);
   }, [activeBranchId]);
 

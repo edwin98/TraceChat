@@ -191,7 +191,7 @@ export function MainThread() {
 
   const referencedBranchObjects = referencedBranchIds
     .map((id) => branches[id])
-    .filter(Boolean);
+    .filter((b): b is NonNullable<typeof b> => Boolean(b));
 
   if (!activeConversationId) {
     return (
@@ -255,7 +255,7 @@ export function MainThread() {
       </div>
 
       <MainComposer
-        referencedBranches={referencedBranchObjects as never[]}
+        referencedBranches={referencedBranchObjects}
         onSend={handleSend}
         onRemoveReference={removeReferencedBranch}
         disabled={isMainStreaming}

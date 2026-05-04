@@ -1,6 +1,5 @@
 import { useState } from "react";
 import type { BranchListItem, MainMessage } from "../types";
-import { MessageContent } from "./MessageContent";
 
 interface Props {
   message: MainMessage;
@@ -16,6 +15,77 @@ const STATUS_COLORS: Record<string, string> = {
   archived: "bg-gray-50 text-gray-400",
 };
 
+const HIGHLIGHT_STYLES: Record<string, string> = {
+  active: "bg-blue-100 underline decoration-blue-500 cursor-pointer",
+  saved: "bg-green-100 underline decoration-green-500 cursor-pointer",
+  merged: "bg-purple-100 underline decoration-purple-500 cursor-pointer",
+  collapsed: "underline decoration-gray-400 cursor-pointer",
+  archived: "",
+};
+
+function renderHighlightedContent(
+  content: string,
+  branches: BranchListItem[],
+  onOpenBranch: (id: string) => void,
+) {
+  const activeBranches = branches.filter(
+    (b) => b.status !== "archived" && b.selected_text,
+  );
+
+  if (!activeBranches.length) {
+    return <span>{content}</span>;
+  }
+
+  // Build segments with highlights
+  const segments: Array<{ text: string; branch?: BranchListItem }> = [];
+  let remaining = content;
+  let offset = 0;
+
+  // Find all highlighted regions, sorted by position in text
+  const regions: Array<{ start: number; end: number; branch: BranchListItem }> = [];
+  for (const branch of activeBranches) {
+    if (!branch.selected_text) continue;
+    const idx = content.indexOf(branch.selected_text, offset);
+    if (idx !== -1) {
+      regions.push({ start: idx, end: idx + branch.selected_text.length, branch });
+    }
+  }
+  regions.sort((a, b) => a.start - b.start);
+
+  let pos = 0;
+  for (const region of regions) {
+    if (pos < region.start) {
+      segments.push({ text: content.slice(pos, region.start) });
+    }
+    if (region.start >= pos) {
+      segments.push({ text: content.slice(region.start, region.end), branch: region.branch });
+      pos = region.end;
+    }
+  }
+  if (pos < content.length) {
+    segments.push({ text: content.slice(pos) });
+  }
+
+  return (
+    <>
+      {segments.map((seg, i) =>
+        seg.branch ? (
+          <mark
+            key={i}
+            onClick={() => onOpenBranch(seg.branch!.id)}
+            title={seg.branch.title}
+            className={`${HIGHLIGHT_STYLES[seg.branch.status] ?? ""} rounded px-0.5`}
+          >
+            {seg.text}
+          </mark>
+        ) : (
+          <span key={i}>{seg.text}</span>
+        ),
+      )}
+    </>
+  );
+}
+
 export function MainMessageItem({ message, branches, onOpenBranch }: Props) {
   const [expanded, setExpanded] = useState(false);
   const isUser = message.role === "user";
@@ -28,13 +98,15 @@ export function MainMessageItem({ message, branches, onOpenBranch }: Props) {
     >
       <div className={`max-w-[80%] ${isUser ? "items-end" : "items-start"} flex flex-col`}>
         <div
-          className={`rounded-2xl px-4 py-3 ${
+          className={`rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
             isUser
               ? "bg-blue-600 text-white"
               : "bg-white border border-gray-200 text-gray-800"
           }`}
         >
-          <MessageContent content={message.content} />
+          {isUser || visibleBranches.length === 0
+            ? message.content
+            : renderHighlightedContent(message.content, visibleBranches, onOpenBranch)}
         </div>
 
         {visibleBranches.length > 0 && (
