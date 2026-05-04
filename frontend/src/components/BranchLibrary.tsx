@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { getBranch } from "../api/branches";
+import { bulkUpdateBranchStatuses, getBranch } from "../api/branches";
 import { getConversationBranches } from "../api/conversations";
 import { useChatStore } from "../store/chatStore";
 import type { BranchListItem, BranchStatus } from "../types";
@@ -34,10 +34,12 @@ const STATUS_STYLES: Record<BranchStatus, string> = {
 
 export function BranchLibrary() {
   const activeConversationId = useChatStore((s) => s.activeConversationId);
+  const cachedBranches = useChatStore((s) => s.branches);
   const setBranch = useChatStore((s) => s.setBranch);
   const openBranchTab = useChatStore((s) => s.openBranchTab);
   const focusMainMessage = useChatStore((s) => s.focusMainMessage);
   const [branches, setBranches] = useState<BranchListItem[]>([]);
+  const [selectedBranchIds, setSelectedBranchIds] = useState<string[]>([]);
   const [status, setStatus] = useState<"all" | BranchStatus>("all");
   const [sortMode, setSortMode] = useState<SortMode>("updated_desc");
   const [summaryFilter, setSummaryFilter] = useState<SummaryFilter>("all");
@@ -47,8 +49,10 @@ export function BranchLibrary() {
   useEffect(() => {
     if (!activeConversationId) {
       setBranches([]);
+      setSelectedBranchIds([]);
       return;
     }
+    setSelectedBranchIds([]);
     void loadBranches();
   }, [activeConversationId]);
 
@@ -67,6 +71,30 @@ export function BranchLibrary() {
     const branch = await getBranch(branchId);
     setBranch(branch);
     openBranchTab(branchId);
+  }
+
+  function toggleSelected(branchId: string) {
+    setSelectedBranchIds((prev) =>
+      prev.includes(branchId)
+        ? prev.filter((id) => id !== branchId)
+        : [...prev, branchId],
+    );
+  }
+
+  async function handleBulkStatus(status: BranchStatus) {
+    if (!selectedBranchIds.length) return;
+    const res = await bulkUpdateBranchStatuses(selectedBranchIds, status);
+    const updatedIds = new Set(res.branches.map((branch) => branch.id));
+    setBranches((prev) =>
+      prev.map((branch) =>
+        updatedIds.has(branch.id) ? { ...branch, status } : branch,
+      ),
+    );
+    for (const item of res.branches) {
+      const cached = cachedBranches[item.id];
+      if (cached) setBranch({ ...cached, status: item.status });
+    }
+    setSelectedBranchIds([]);
   }
 
   const filteredBranches = useMemo(() => {
@@ -108,6 +136,10 @@ export function BranchLibrary() {
     }
     return counts;
   }, [branches]);
+
+  const visibleSelectedCount = filteredBranches.filter((branch) =>
+    selectedBranchIds.includes(branch.id),
+  ).length;
 
   if (!activeConversationId) return null;
 
@@ -167,6 +199,44 @@ export function BranchLibrary() {
             </button>
           ))}
         </div>
+        {selectedBranchIds.length > 0 && (
+          <div className="mt-2 rounded-lg border border-gray-200 bg-gray-50 px-2 py-2">
+            <div className="mb-1.5 flex items-center justify-between gap-2">
+              <span className="text-xs text-gray-600">
+                已选 {selectedBranchIds.length} 个支线
+                {visibleSelectedCount !== selectedBranchIds.length
+                  ? `（当前视图 ${visibleSelectedCount} 个）`
+                  : ""}
+              </span>
+              <button
+                onClick={() => setSelectedBranchIds([])}
+                className="rounded px-1.5 py-0.5 text-xs text-gray-500 hover:bg-white"
+              >
+                取消
+              </button>
+            </div>
+            <div className="grid grid-cols-3 gap-1">
+              <button
+                onClick={() => handleBulkStatus("saved")}
+                className="rounded-md border border-green-200 bg-white px-1.5 py-1 text-xs text-green-700 hover:bg-green-50"
+              >
+                保存
+              </button>
+              <button
+                onClick={() => handleBulkStatus("collapsed")}
+                className="rounded-md border border-gray-200 bg-white px-1.5 py-1 text-xs text-gray-600 hover:bg-gray-100"
+              >
+                折叠
+              </button>
+              <button
+                onClick={() => handleBulkStatus("archived")}
+                className="rounded-md border border-gray-200 bg-white px-1.5 py-1 text-xs text-gray-500 hover:bg-gray-100"
+              >
+                归档
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto px-3 py-3 space-y-2">
@@ -188,6 +258,14 @@ export function BranchLibrary() {
               className="w-full cursor-pointer rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-left hover:border-blue-200 hover:bg-blue-50/40 transition-colors"
             >
               <div className="flex items-start justify-between gap-2">
+                <input
+                  type="checkbox"
+                  checked={selectedBranchIds.includes(branch.id)}
+                  onChange={() => toggleSelected(branch.id)}
+                  onClick={(e) => e.stopPropagation()}
+                  className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 rounded border-gray-300"
+                  title="选择支线"
+                />
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-medium text-gray-800">
                     {branch.title}

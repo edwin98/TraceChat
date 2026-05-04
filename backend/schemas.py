@@ -149,3 +149,18 @@ class BranchListItem(BaseModel):
 
 class UpdateBranchStatusInput(BaseModel):
     status: str
+
+
+class BulkUpdateBranchStatusInput(BaseModel):
+    branch_ids: list[str]
+    status: str
+
+
+class BulkBranchStatusItem(BaseModel):
+    id: str
+    status: str
+
+
+class BulkUpdateBranchStatusResponse(BaseModel):
+    updated: int
+    branches: list[BulkBranchStatusItem]

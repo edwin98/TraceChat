@@ -23,6 +23,8 @@ from models import (
 from schemas import (
     BranchMessageOut,
     BranchThreadOut,
+    BulkUpdateBranchStatusInput,
+    BulkUpdateBranchStatusResponse,
     CreateBranchInput,
     CreateBranchMessageInput,
     CreateBranchMessageResponse,
@@ -44,6 +46,9 @@ def _get_stream_store():
     from routers.streams import _stream_store as ss
 
     return ss
+
+
+VALID_BRANCH_STATUSES = {"active", "collapsed", "saved", "merged", "archived"}
 
 
 @router.post("", response_model=CreateBranchResponse)
@@ -298,10 +303,34 @@ async def update_branch_status(
     branch = await db.get(BranchThread, branch_id)
     if not branch:
         raise HTTPException(404, "branch not found")
-    valid_statuses = {"active", "collapsed", "saved", "merged", "archived"}
-    if body.status not in valid_statuses:
+    if body.status not in VALID_BRANCH_STATUSES:
         raise HTTPException(400, "invalid status")
     branch.status = body.status
     branch.updated_at = datetime.utcnow()
     await db.commit()
     return {"id": branch.id, "status": branch.status}
+
+
+@router.patch("/status", response_model=BulkUpdateBranchStatusResponse)
+async def bulk_update_branch_status(
+    body: BulkUpdateBranchStatusInput,
+    db: AsyncSession = Depends(get_db),
+):
+    if body.status not in VALID_BRANCH_STATUSES:
+        raise HTTPException(400, "invalid status")
+    if not body.branch_ids:
+        return BulkUpdateBranchStatusResponse(updated=0, branches=[])
+
+    result = await db.execute(
+        select(BranchThread).where(BranchThread.id.in_(body.branch_ids))
+    )
+    branches = list(result.scalars().all())
+    for branch in branches:
+        branch.status = body.status
+        branch.updated_at = datetime.utcnow()
+    await db.commit()
+
+    return BulkUpdateBranchStatusResponse(
+        updated=len(branches),
+        branches=[{"id": branch.id, "status": branch.status} for branch in branches],
+    )
