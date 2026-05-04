@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { BranchThread } from "../types";
 
 interface Props {
@@ -12,6 +12,10 @@ export function BranchSummaryCard({ branch, onSummarize, onMerge, onReferenceToI
   const [loading, setLoading] = useState(false);
   const [merging, setMerging] = useState(false);
   const [editedSummary, setEditedSummary] = useState(branch.summary ?? "");
+
+  useEffect(() => {
+    if (branch.summary) setEditedSummary(branch.summary);
+  }, [branch.summary]);
 
   async function handleSummarize() {
     setLoading(true);
@@ -32,11 +36,11 @@ export function BranchSummaryCard({ branch, onSummarize, onMerge, onReferenceToI
     }
   }
 
-  const summaryToShow = branch.summary ?? editedSummary;
+  const hasSummary = Boolean(branch.summary || editedSummary);
 
   return (
     <div className="border-t border-gray-100 pt-3 space-y-2">
-      {summaryToShow ? (
+      {hasSummary ? (
         <>
           <div className="text-xs font-medium text-gray-600 flex items-center justify-between">
             <span>摘要</span>
@@ -51,7 +55,7 @@ export function BranchSummaryCard({ branch, onSummarize, onMerge, onReferenceToI
             )}
           </div>
           <textarea
-            value={branch.summary ?? editedSummary}
+            value={editedSummary}
             onChange={(e) => setEditedSummary(e.target.value)}
             disabled={branch.status === "merged"}
             rows={4}
@@ -68,11 +72,11 @@ export function BranchSummaryCard({ branch, onSummarize, onMerge, onReferenceToI
         </button>
       )}
 
-      {summaryToShow && branch.status !== "merged" && (
+      {hasSummary && branch.status !== "merged" && (
         <div className="flex gap-2">
           <button
             onClick={handleMerge}
-            disabled={merging}
+            disabled={merging || !editedSummary.trim()}
             className="flex-1 py-1.5 text-xs bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors"
           >
             {merging ? "回填中..." : "回填主线"}

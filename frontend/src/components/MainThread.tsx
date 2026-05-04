@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useChatStore } from "../store/chatStore";
 import { createSSEStream } from "../api/client";
 import { sendMainMessage } from "../api/conversations";
-import { createBranch, getMessageBranches } from "../api/branches";
+import { createBranch, getBranch, getMessageBranches } from "../api/branches";
 import { MainMessageItem } from "./MainMessageItem";
 import { SelectionToolbar } from "./SelectionToolbar";
 import { MainComposer } from "./MainComposer";
@@ -130,40 +130,59 @@ export function MainThread() {
       intent,
     });
 
-    openBranchTab(res.branch_thread_id);
-    setBranchMessages(res.branch_thread_id, []);
+    const branchId = res.branch_thread_id;
+    const capturedQuestion = question;
 
-    // Refresh branches for that message
-    const msgBranches = await getMessageBranches(selectedMainText.messageId);
-    setMessageBranches((prev) => ({
-      ...prev,
-      [selectedMainText.messageId]: msgBranches.branches as BranchListItem[],
-    }));
+    // Load branch metadata
+    const branchData = await getBranch(branchId);
+    setBranch(branchData);
 
-    let accumulated = "";
+    // Seed branch messages with user message
+    setBranchMessages(branchId, [
+      {
+        id: `tmp-user-${branchId}`,
+        branch_thread_id: branchId,
+        role: "user",
+        content: capturedQuestion,
+        created_at: new Date().toISOString(),
+      },
+    ]);
+
+    openBranchTab(branchId);
+
+    // Refresh source message branch list
+    const msgId = selectedMainText.messageId;
+    getMessageBranches(msgId).then((r) => {
+      setMessageBranches((prev) => ({
+        ...prev,
+        [msgId]: r.branches as BranchListItem[],
+      }));
+    });
+
+    // Stream assistant response
     const { setStreamingBranchContent, setIsBranchStreaming, finalizeBranchMessage } =
       useChatStore.getState();
-    setIsBranchStreaming(res.branch_thread_id, true);
+    setIsBranchStreaming(branchId, true);
+    let accumulated = "";
 
     createSSEStream(
       res.stream_url,
       (chunk) => {
         accumulated += chunk;
-        setStreamingBranchContent(res.branch_thread_id, accumulated);
+        setStreamingBranchContent(branchId, accumulated);
       },
       (messageId) => {
-        finalizeBranchMessage(res.branch_thread_id, {
+        finalizeBranchMessage(branchId, {
           id: messageId,
-          branch_thread_id: res.branch_thread_id,
+          branch_thread_id: branchId,
           role: "assistant",
           content: accumulated,
           created_at: new Date().toISOString(),
         });
-        // Also add the user message (first one)
       },
       (err) => {
         console.error("branch create stream error:", err);
-        setIsBranchStreaming(res.branch_thread_id, false);
+        setIsBranchStreaming(branchId, false);
       },
     );
 

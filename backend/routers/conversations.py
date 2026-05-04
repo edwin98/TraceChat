@@ -21,8 +21,6 @@ from config import settings
 
 router = APIRouter(prefix="/api/conversations", tags=["conversations"])
 
-_stream_store: dict[str, asyncio.Queue] = {}
-
 
 @router.post("", response_model=ConversationOut)
 async def create_conversation(
@@ -112,6 +110,8 @@ async def create_main_message(
             select(BranchThread).where(BranchThread.id.in_(body.referenced_branch_ids))
         )
         branch_summaries = list(result.scalars().all())
+
+    from routers.streams import _stream_store
 
     assistant_id = str(uuid.uuid4())
     stream_id = str(uuid.uuid4())
