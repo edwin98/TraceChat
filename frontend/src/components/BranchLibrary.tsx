@@ -44,13 +44,13 @@ export function BranchLibrary() {
       return;
     }
     void loadBranches();
-  }, [activeConversationId, status]);
+  }, [activeConversationId]);
 
   async function loadBranches() {
     if (!activeConversationId) return;
     setLoading(true);
     try {
-      const res = await getConversationBranches(activeConversationId, { status });
+      const res = await getConversationBranches(activeConversationId);
       setBranches(res.branches);
     } finally {
       setLoading(false);
@@ -65,8 +65,9 @@ export function BranchLibrary() {
 
   const filteredBranches = useMemo(() => {
     const keyword = query.trim().toLowerCase();
-    if (!keyword) return branches;
     return branches.filter((branch) => {
+      if (status !== "all" && branch.status !== status) return false;
+      if (!keyword) return true;
       const haystack = [
         branch.title,
         branch.summary ?? "",
@@ -74,7 +75,22 @@ export function BranchLibrary() {
       ].join("\n").toLowerCase();
       return haystack.includes(keyword);
     });
-  }, [branches, query]);
+  }, [branches, query, status]);
+
+  const statusCounts = useMemo(() => {
+    const counts: Record<"all" | BranchStatus, number> = {
+      all: branches.length,
+      active: 0,
+      collapsed: 0,
+      saved: 0,
+      merged: 0,
+      archived: 0,
+    };
+    for (const branch of branches) {
+      counts[branch.status] += 1;
+    }
+    return counts;
+  }, [branches]);
 
   if (!activeConversationId) return null;
 
@@ -110,6 +126,7 @@ export function BranchLibrary() {
               }`}
             >
               {option.label}
+              <span className="ml-1 opacity-70">{statusCounts[option.value]}</span>
             </button>
           ))}
         </div>
