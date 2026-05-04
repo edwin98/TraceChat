@@ -16,7 +16,7 @@ export function BranchComposer({ onSend, disabled }: Props) {
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       handleSend();
     }
@@ -29,7 +29,7 @@ export function BranchComposer({ onSend, disabled }: Props) {
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="继续追问..."
+          placeholder="继续追问，Ctrl+Enter 发送..."
           disabled={disabled}
           rows={2}
           className="flex-1 resize-none rounded-xl border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:opacity-50"

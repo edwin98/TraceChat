@@ -19,7 +19,7 @@ export function MainComposer({ referencedBranches, onSend, onRemoveReference, di
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       handleSend();
     }
@@ -51,7 +51,7 @@ export function MainComposer({ referencedBranches, onSend, onRemoveReference, di
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="输入消息，Enter 发送，Shift+Enter 换行..."
+          placeholder="输入消息，Ctrl+Enter 发送..."
           disabled={disabled}
           rows={2}
           className="flex-1 resize-none rounded-xl border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
