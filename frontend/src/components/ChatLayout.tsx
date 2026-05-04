@@ -15,6 +15,7 @@ import { BranchLibrary } from "./BranchLibrary";
 
 export function ChatLayout() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [recentConversationId, setRecentConversationId] = useState<string | null>(null);
   const {
     activeConversationId,
     branchPanelOpen,
@@ -31,6 +32,7 @@ export function ChatLayout() {
     setConversations(list);
     if (!activeConversationId && list.length > 0) {
       const latest = list[0];
+      setRecentConversationId(latest.id);
       setActiveConversation(latest.id);
       const msgs = await getMessages(latest.id);
       setMainMessages(msgs);
@@ -38,6 +40,7 @@ export function ChatLayout() {
   }
 
   async function handleSelectConversation(id: string) {
+    setRecentConversationId(id);
     setActiveConversation(id);
     const msgs = await getMessages(id);
     setMainMessages(msgs);
@@ -46,6 +49,7 @@ export function ChatLayout() {
   async function handleCreateConversation() {
     const conv = await createConversation("新对话");
     setConversations((prev) => [conv, ...prev]);
+    setRecentConversationId(conv.id);
     setActiveConversation(conv.id);
     setMainMessages([]);
   }
@@ -62,6 +66,7 @@ export function ChatLayout() {
       <Sidebar
         conversations={conversations}
         activeId={activeConversationId}
+        recentId={recentConversationId}
         onSelect={handleSelectConversation}
         onCreate={handleCreateConversation}
         onRename={handleRenameConversation}

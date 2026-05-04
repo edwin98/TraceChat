@@ -3,6 +3,8 @@ export interface Conversation {
   title: string;
   created_at: string;
   updated_at: string;
+  message_count?: number;
+  branch_count?: number;
 }
 
 export interface MainMessage {

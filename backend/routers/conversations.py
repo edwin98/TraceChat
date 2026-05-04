@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from context_builder import build_main_context
@@ -38,7 +38,30 @@ async def list_conversations(db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(Conversation).order_by(Conversation.updated_at.desc())
     )
-    return result.scalars().all()
+    conversations = list(result.scalars().all())
+    output = []
+    for conv in conversations:
+        message_count = await db.scalar(
+            select(func.count(MainMessage.id)).where(
+                MainMessage.conversation_id == conv.id
+            )
+        )
+        branch_count = await db.scalar(
+            select(func.count(BranchThread.id)).where(
+                BranchThread.conversation_id == conv.id
+            )
+        )
+        output.append(
+            {
+                "id": conv.id,
+                "title": conv.title,
+                "created_at": conv.created_at,
+                "updated_at": conv.updated_at,
+                "message_count": message_count or 0,
+                "branch_count": branch_count or 0,
+            }
+        )
+    return output
 
 
 @router.get("/{conversation_id}", response_model=ConversationOut)

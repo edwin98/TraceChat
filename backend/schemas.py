@@ -17,6 +17,8 @@ class ConversationOut(BaseModel):
     title: str
     created_at: datetime
     updated_at: datetime
+    message_count: int = 0
+    branch_count: int = 0
 
     model_config = {"from_attributes": True}
 

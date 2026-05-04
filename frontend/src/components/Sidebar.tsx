@@ -4,12 +4,20 @@ import type { Conversation } from "../types";
 interface Props {
   conversations: Conversation[];
   activeId: string | null;
+  recentId: string | null;
   onSelect: (id: string) => void;
   onCreate: () => void;
   onRename: (id: string, title: string) => Promise<void>;
 }
 
-export function Sidebar({ conversations, activeId, onSelect, onCreate, onRename }: Props) {
+export function Sidebar({
+  conversations,
+  activeId,
+  recentId,
+  onSelect,
+  onCreate,
+  onRename,
+}: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftTitle, setDraftTitle] = useState("");
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -35,11 +43,14 @@ export function Sidebar({ conversations, activeId, onSelect, onCreate, onRename 
 
   const filteredConversations = useMemo(() => {
     const keyword = query.trim().toLowerCase();
-    if (!keyword) return conversations;
-    return conversations.filter((conv) =>
-      conv.title.toLowerCase().includes(keyword),
-    );
-  }, [conversations, query]);
+    const filtered = keyword
+      ? conversations.filter((conv) => conv.title.toLowerCase().includes(keyword))
+      : conversations;
+    if (!recentId) return filtered;
+    const recent = filtered.find((conv) => conv.id === recentId);
+    if (!recent) return filtered;
+    return [recent, ...filtered.filter((conv) => conv.id !== recentId)];
+  }, [conversations, query, recentId]);
 
   return (
     <div className="w-64 bg-gray-900 text-white flex flex-col h-full flex-shrink-0">
@@ -113,7 +124,16 @@ export function Sidebar({ conversations, activeId, onSelect, onCreate, onRename 
               )}
             </div>
             <div className="text-xs opacity-60 mt-0.5">
-              {new Date(conv.updated_at).toLocaleDateString("zh-CN")}
+              <span>{new Date(conv.updated_at).toLocaleDateString("zh-CN")}</span>
+              <span className="mx-1">·</span>
+              <span>{conv.message_count ?? 0} 消息</span>
+              <span className="mx-1">·</span>
+              <span>{conv.branch_count ?? 0} 支线</span>
+              {conv.id === recentId && (
+                <span className="ml-1 rounded bg-gray-700 px-1 py-0.5 text-[10px] text-gray-300">
+                  最近
+                </span>
+              )}
             </div>
           </div>
         ))}
