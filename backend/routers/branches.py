@@ -33,7 +33,7 @@ from schemas import (
     SummarizeBranchResponse,
     UpdateBranchStatusInput,
 )
-from config import settings
+from routers.settings import get_branch_model
 
 router = APIRouter(prefix="/api/branches", tags=["branches"])
 
@@ -65,7 +65,7 @@ async def create_branch(body: CreateBranchInput, db: AsyncSession = Depends(get_
     main_topic_summary = recent[0].content[:200] if recent else ""
 
     title_system, title_msgs = build_title_context(body.initial_question)
-    title = await complete(title_system, title_msgs, settings.branch_model)
+    title = await complete(title_system, title_msgs, get_branch_model())
     title = title.strip().strip('"').strip()[:50] or body.initial_question[:30]
 
     branch = BranchThread(
@@ -113,7 +113,7 @@ async def create_branch(body: CreateBranchInput, db: AsyncSession = Depends(get_
         full_content = ""
         try:
             async for chunk in stream_completion(
-                branch_system, branch_msgs, settings.branch_model
+                branch_system, branch_msgs, get_branch_model()
             ):
                 full_content += chunk
                 await queue.put(("data", chunk))
@@ -201,7 +201,7 @@ async def create_branch_message(
         full_content = ""
         try:
             async for chunk in stream_completion(
-                branch_system2, branch_msgs2, settings.branch_model
+                branch_system2, branch_msgs2, get_branch_model()
             ):
                 full_content += chunk
                 await queue.put(("data", chunk))
@@ -250,7 +250,7 @@ async def summarize_branch(
     messages = list(result.scalars().all())
 
     summary_system, summary_msgs = build_summary_context(branch, messages)
-    summary = await complete(summary_system, summary_msgs, settings.branch_model)
+    summary = await complete(summary_system, summary_msgs, get_branch_model())
     summary = summary.strip()
 
     branch.summary = summary

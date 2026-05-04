@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from database import init_db
 from routers import branches, conversations, messages, streams
+from routers import settings as settings_router
 
 app = FastAPI(title="TraceChat API", version="0.1.0")
 
@@ -18,6 +19,7 @@ app.include_router(conversations.router)
 app.include_router(branches.router)
 app.include_router(streams.router)
 app.include_router(messages.router)
+app.include_router(settings_router.router)
 
 
 @app.on_event("startup")

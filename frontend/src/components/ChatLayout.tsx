@@ -9,6 +9,7 @@ import type { Conversation } from "../types";
 import { Sidebar } from "./Sidebar";
 import { MainThread } from "./MainThread";
 import { BranchPanel } from "./BranchPanel";
+import { ModelSelector } from "./ModelSelector";
 
 export function ChatLayout() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -50,16 +51,23 @@ export function ChatLayout() {
         onCreate={handleCreateConversation}
       />
 
-      <div className="flex flex-1 min-w-0">
-        <div className={`flex flex-col ${branchPanelOpen ? "flex-1" : "flex-1"} min-w-0`}>
-          <MainThread />
+      <div className="flex flex-col flex-1 min-w-0">
+        {/* Top bar with model selector */}
+        <div className="flex items-center justify-end px-4 py-2 border-b border-gray-200 bg-white flex-shrink-0">
+          <ModelSelector />
         </div>
 
-        {branchPanelOpen && (
-          <div className="w-[380px] flex-shrink-0 flex flex-col border-l border-gray-200">
-            <BranchPanel />
+        <div className="flex flex-1 min-h-0">
+          <div className="flex flex-col flex-1 min-w-0">
+            <MainThread />
           </div>
-        )}
+
+          {branchPanelOpen && (
+            <div className="w-[380px] flex-shrink-0 flex flex-col border-l border-gray-200">
+              <BranchPanel />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

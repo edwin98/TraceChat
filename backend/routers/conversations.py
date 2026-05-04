@@ -17,7 +17,6 @@ from schemas import (
     CreateMainMessageResponse,
     MainMessageOut,
 )
-from config import settings
 
 router = APIRouter(prefix="/api/conversations", tags=["conversations"])
 
@@ -128,8 +127,10 @@ async def create_main_message(
     async def _run():
         full_content = ""
         try:
+            from routers.settings import get_main_model
+
             async for chunk in stream_completion(
-                system, chat_messages, settings.main_model
+                system, chat_messages, get_main_model()
             ):
                 full_content += chunk
                 await queue.put(("data", chunk))
