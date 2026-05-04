@@ -35,10 +35,10 @@ export function MainThread() {
     setSelectedMainText,
     clearFocusedMainMessage,
     removeReferencedBranch,
+    clearReferencedBranches,
     openBranchTab,
     setBranch,
     setBranchMessages,
-    clearReferencedBranches,
   } = useChatStore();
 
   const [messageBranches, setMessageBranches] = useState<Record<string, BranchListItem[]>>({});
@@ -277,6 +277,7 @@ export function MainThread() {
         referencedBranches={referencedBranchObjects}
         onSend={handleSend}
         onRemoveReference={removeReferencedBranch}
+        onClearReferences={clearReferencedBranches}
         disabled={isMainStreaming}
       />
     </div>

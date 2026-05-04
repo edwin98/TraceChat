@@ -142,6 +142,10 @@ export function BranchPanel() {
   }
 
   function handleReferenceToInput(branch: BranchThread) {
+    if (!branch.summary?.trim()) {
+      window.alert("请先生成支线摘要，再引用到主线输入框。");
+      return;
+    }
     addReferencedBranch(branch.id);
   }
 
