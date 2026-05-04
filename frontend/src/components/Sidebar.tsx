@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Conversation } from "../types";
 
 interface Props {
@@ -13,6 +13,7 @@ export function Sidebar({ conversations, activeId, onSelect, onCreate, onRename 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftTitle, setDraftTitle] = useState("");
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
     if (!editingId) return;
@@ -32,6 +33,14 @@ export function Sidebar({ conversations, activeId, onSelect, onCreate, onRename 
     }
   }
 
+  const filteredConversations = useMemo(() => {
+    const keyword = query.trim().toLowerCase();
+    if (!keyword) return conversations;
+    return conversations.filter((conv) =>
+      conv.title.toLowerCase().includes(keyword),
+    );
+  }, [conversations, query]);
+
   return (
     <div className="w-64 bg-gray-900 text-white flex flex-col h-full flex-shrink-0">
       <div className="px-4 py-4 border-b border-gray-700">
@@ -46,10 +55,22 @@ export function Sidebar({ conversations, activeId, onSelect, onCreate, onRename 
         >
           + 新对话
         </button>
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="搜索会话"
+          className="mt-2 w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-xs text-white outline-none placeholder:text-gray-500 focus:border-blue-400"
+        />
       </div>
 
       <div className="flex-1 overflow-y-auto px-3 pb-4 space-y-1">
-        {conversations.map((conv) => (
+        {filteredConversations.length === 0 && (
+          <div className="px-3 py-6 text-center text-xs text-gray-500">
+            没有匹配会话
+          </div>
+        )}
+
+        {filteredConversations.map((conv) => (
           <div
             key={conv.id}
             onClick={() => onSelect(conv.id)}
