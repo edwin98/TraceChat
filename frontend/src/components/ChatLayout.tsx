@@ -1,0 +1,66 @@
+import { useEffect, useState } from "react";
+import { useChatStore } from "../store/chatStore";
+import {
+  createConversation,
+  getMessages,
+  listConversations,
+} from "../api/conversations";
+import type { Conversation } from "../types";
+import { Sidebar } from "./Sidebar";
+import { MainThread } from "./MainThread";
+import { BranchPanel } from "./BranchPanel";
+
+export function ChatLayout() {
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const {
+    activeConversationId,
+    branchPanelOpen,
+    setActiveConversation,
+    setMainMessages,
+  } = useChatStore();
+
+  useEffect(() => {
+    loadConversations();
+  }, []);
+
+  async function loadConversations() {
+    const list = await listConversations();
+    setConversations(list);
+  }
+
+  async function handleSelectConversation(id: string) {
+    setActiveConversation(id);
+    const msgs = await getMessages(id);
+    setMainMessages(msgs);
+  }
+
+  async function handleCreateConversation() {
+    const conv = await createConversation("新对话");
+    setConversations((prev) => [conv, ...prev]);
+    setActiveConversation(conv.id);
+    setMainMessages([]);
+  }
+
+  return (
+    <div className="flex h-screen overflow-hidden">
+      <Sidebar
+        conversations={conversations}
+        activeId={activeConversationId}
+        onSelect={handleSelectConversation}
+        onCreate={handleCreateConversation}
+      />
+
+      <div className="flex flex-1 min-w-0">
+        <div className={`flex flex-col ${branchPanelOpen ? "flex-1" : "flex-1"} min-w-0`}>
+          <MainThread />
+        </div>
+
+        {branchPanelOpen && (
+          <div className="w-[380px] flex-shrink-0 flex flex-col border-l border-gray-200">
+            <BranchPanel />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
