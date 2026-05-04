@@ -51,6 +51,7 @@ export function BranchPanel() {
     closeBranchTab,
     openBranchTab,
     addReferencedBranch,
+    focusMainMessage,
   } = useChatStore();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -214,7 +215,7 @@ export function BranchPanel() {
 
           {/* Source card */}
           <div className="px-3 pt-3 flex-shrink-0">
-            <BranchSourceCard branch={activeBranch} />
+            <BranchSourceCard branch={activeBranch} onOpenSource={focusMainMessage} />
           </div>
 
           {/* Messages */}

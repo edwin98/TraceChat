@@ -4,6 +4,9 @@ import { getConversationBranches } from "../api/conversations";
 import { useChatStore } from "../store/chatStore";
 import type { BranchListItem, BranchStatus } from "../types";
 
+type SortMode = "updated_desc" | "created_desc" | "title_asc";
+type SummaryFilter = "all" | "with_summary" | "without_summary";
+
 const STATUS_OPTIONS: Array<{ value: "all" | BranchStatus; label: string }> = [
   { value: "all", label: "全部" },
   { value: "active", label: "活跃" },
@@ -33,8 +36,11 @@ export function BranchLibrary() {
   const activeConversationId = useChatStore((s) => s.activeConversationId);
   const setBranch = useChatStore((s) => s.setBranch);
   const openBranchTab = useChatStore((s) => s.openBranchTab);
+  const focusMainMessage = useChatStore((s) => s.focusMainMessage);
   const [branches, setBranches] = useState<BranchListItem[]>([]);
   const [status, setStatus] = useState<"all" | BranchStatus>("all");
+  const [sortMode, setSortMode] = useState<SortMode>("updated_desc");
+  const [summaryFilter, setSummaryFilter] = useState<SummaryFilter>("all");
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -65,8 +71,10 @@ export function BranchLibrary() {
 
   const filteredBranches = useMemo(() => {
     const keyword = query.trim().toLowerCase();
-    return branches.filter((branch) => {
+    const result = branches.filter((branch) => {
       if (status !== "all" && branch.status !== status) return false;
+      if (summaryFilter === "with_summary" && !branch.summary) return false;
+      if (summaryFilter === "without_summary" && branch.summary) return false;
       if (!keyword) return true;
       const haystack = [
         branch.title,
@@ -75,7 +83,16 @@ export function BranchLibrary() {
       ].join("\n").toLowerCase();
       return haystack.includes(keyword);
     });
-  }, [branches, query, status]);
+    return [...result].sort((a, b) => {
+      if (sortMode === "created_desc") {
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }
+      if (sortMode === "title_asc") {
+        return a.title.localeCompare(b.title, "zh-CN");
+      }
+      return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+    });
+  }, [branches, query, status, summaryFilter, sortMode]);
 
   const statusCounts = useMemo(() => {
     const counts: Record<"all" | BranchStatus, number> = {
@@ -114,6 +131,26 @@ export function BranchLibrary() {
           placeholder="搜索标题、摘要或选中文本"
           className="mt-3 w-full rounded-lg border border-gray-200 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-400"
         />
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <select
+            value={sortMode}
+            onChange={(e) => setSortMode(e.target.value as SortMode)}
+            className="rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-400"
+          >
+            <option value="updated_desc">最近更新</option>
+            <option value="created_desc">最近创建</option>
+            <option value="title_asc">标题 A-Z</option>
+          </select>
+          <select
+            value={summaryFilter}
+            onChange={(e) => setSummaryFilter(e.target.value as SummaryFilter)}
+            className="rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-400"
+          >
+            <option value="all">全部摘要</option>
+            <option value="with_summary">有摘要</option>
+            <option value="without_summary">无摘要</option>
+          </select>
+        </div>
         <div className="mt-2 flex gap-1 overflow-x-auto pb-1">
           {STATUS_OPTIONS.map((option) => (
             <button
@@ -145,10 +182,10 @@ export function BranchLibrary() {
 
         {!loading &&
           filteredBranches.map((branch) => (
-            <button
+            <div
               key={branch.id}
               onClick={() => handleOpenBranch(branch.id)}
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-left hover:border-blue-200 hover:bg-blue-50/40 transition-colors"
+              className="w-full cursor-pointer rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-left hover:border-blue-200 hover:bg-blue-50/40 transition-colors"
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
@@ -174,10 +211,19 @@ export function BranchLibrary() {
                   {branch.summary}
                 </div>
               )}
-              <div className="mt-2 text-[10px] text-gray-400">
-                更新于 {new Date(branch.updated_at).toLocaleString("zh-CN")}
+              <div className="mt-2 flex items-center justify-between gap-2 text-[10px] text-gray-400">
+                <span>更新于 {new Date(branch.updated_at).toLocaleString("zh-CN")}</span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    focusMainMessage(branch.source_message_id);
+                  }}
+                  className="flex-shrink-0 rounded-md border border-gray-200 px-1.5 py-0.5 text-gray-500 hover:border-amber-300 hover:bg-amber-50 hover:text-amber-700"
+                >
+                  来源
+                </button>
               </div>
-            </button>
+            </div>
           ))}
       </div>
     </aside>

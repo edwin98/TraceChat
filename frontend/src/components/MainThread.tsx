@@ -25,6 +25,7 @@ export function MainThread() {
     streamingMainContent,
     isMainStreaming,
     selectedMainText,
+    focusedMainMessageId,
     referencedBranchIds,
     branches,
     finalizeMainMessage,
@@ -32,6 +33,7 @@ export function MainThread() {
     setIsMainStreaming,
     addMainMessage,
     setSelectedMainText,
+    clearFocusedMainMessage,
     removeReferencedBranch,
     openBranchTab,
     setBranch,
@@ -40,6 +42,7 @@ export function MainThread() {
   } = useChatStore();
 
   const [messageBranches, setMessageBranches] = useState<Record<string, BranchListItem[]>>({});
+  const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const handleSelectionChange = useCallback(
@@ -54,6 +57,19 @@ export function MainThread() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [mainMessages, streamingMainContent]);
+
+  useEffect(() => {
+    if (!focusedMainMessageId) return;
+    const el = document.getElementById(`main-message-${focusedMainMessageId}`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    setHighlightedMessageId(focusedMainMessageId);
+    const timer = window.setTimeout(() => {
+      setHighlightedMessageId(null);
+      clearFocusedMainMessage();
+    }, 1500);
+    return () => window.clearTimeout(timer);
+  }, [focusedMainMessageId, mainMessages, clearFocusedMainMessage]);
 
   useEffect(() => {
     if (!mainMessages.length || !activeConversationId) return;
@@ -229,6 +245,7 @@ export function MainThread() {
             message={msg}
             branches={messageBranches[msg.id] ?? []}
             onOpenBranch={openBranchTab}
+            highlighted={highlightedMessageId === msg.id}
           />
         ))}
 

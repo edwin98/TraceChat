@@ -18,6 +18,7 @@ interface ChatStore {
 
   selectedMainText: SelectedMainText | null;
   referencedBranchIds: string[];
+  focusedMainMessageId: string | null;
 
   setActiveConversation: (id: string) => void;
   setActiveBranchId: (id: string | null) => void;
@@ -40,6 +41,8 @@ interface ChatStore {
   closeBranchTab: (branchId: string) => void;
 
   setSelectedMainText: (sel: SelectedMainText | null) => void;
+  focusMainMessage: (id: string) => void;
+  clearFocusedMainMessage: () => void;
   addReferencedBranch: (id: string) => void;
   removeReferencedBranch: (id: string) => void;
   clearReferencedBranches: () => void;
@@ -62,6 +65,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   selectedMainText: null,
   referencedBranchIds: [],
+  focusedMainMessageId: null,
 
   setActiveConversation: (id) =>
     set({
@@ -76,6 +80,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       isBranchStreaming: {},
       selectedMainText: null,
       referencedBranchIds: [],
+      focusedMainMessageId: null,
     }),
 
   setActiveBranchId: (id) => set({ activeBranchId: id }),
@@ -151,6 +156,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     }),
 
   setSelectedMainText: (sel) => set({ selectedMainText: sel }),
+
+  focusMainMessage: (id) => set({ focusedMainMessageId: id }),
+
+  clearFocusedMainMessage: () => set({ focusedMainMessageId: null }),
 
   addReferencedBranch: (id) =>
     set((s) =>

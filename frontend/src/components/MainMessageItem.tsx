@@ -6,6 +6,7 @@ interface Props {
   message: MainMessage;
   branches: BranchListItem[];
   onOpenBranch: (branchId: string) => void;
+  highlighted?: boolean;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -87,14 +88,17 @@ function renderHighlightedContent(
   );
 }
 
-export function MainMessageItem({ message, branches, onOpenBranch }: Props) {
+export function MainMessageItem({ message, branches, onOpenBranch, highlighted }: Props) {
   const [expanded, setExpanded] = useState(false);
   const isUser = message.role === "user";
   const visibleBranches = branches.filter((b) => b.status !== "archived");
 
   return (
     <div
-      className={`flex ${isUser ? "justify-end" : "justify-start"} mb-4`}
+      id={`main-message-${message.id}`}
+      className={`flex ${isUser ? "justify-end" : "justify-start"} mb-4 rounded-2xl transition-shadow duration-300 ${
+        highlighted ? "ring-2 ring-amber-300 ring-offset-2" : ""
+      }`}
       data-message-id={message.id}
     >
       <div className={`max-w-[80%] ${isUser ? "items-end" : "items-start"} flex flex-col`}>
