@@ -10,6 +10,7 @@ import { Sidebar } from "./Sidebar";
 import { MainThread } from "./MainThread";
 import { BranchPanel } from "./BranchPanel";
 import { ModelSelector } from "./ModelSelector";
+import { BranchLibrary } from "./BranchLibrary";
 
 export function ChatLayout() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -67,6 +68,8 @@ export function ChatLayout() {
               <BranchPanel />
             </div>
           )}
+
+          <BranchLibrary />
         </div>
       </div>
     </div>

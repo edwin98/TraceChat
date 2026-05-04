@@ -30,10 +30,11 @@ export async function sendMainMessage(
 
 export async function getConversationBranches(
   conversationId: string,
-  sourceMessageId?: string,
+  options: { sourceMessageId?: string; status?: string } = {},
 ): Promise<{ branches: BranchListItem[] }> {
   const params: Record<string, string> = {};
-  if (sourceMessageId) params.source_message_id = sourceMessageId;
+  if (options.sourceMessageId) params.source_message_id = options.sourceMessageId;
+  if (options.status && options.status !== "all") params.status = options.status;
   const res = await api.get(`/api/conversations/${conversationId}/branches`, { params });
   return res.data;
 }
