@@ -28,6 +28,12 @@ export function ChatLayout() {
   async function loadConversations() {
     const list = await listConversations();
     setConversations(list);
+    if (!activeConversationId && list.length > 0) {
+      const latest = list[0];
+      setActiveConversation(latest.id);
+      const msgs = await getMessages(latest.id);
+      setMainMessages(msgs);
+    }
   }
 
   async function handleSelectConversation(id: string) {
