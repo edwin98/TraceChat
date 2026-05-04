@@ -90,10 +90,12 @@ async def create_main_message(
     result = await db.execute(
         select(MainMessage)
         .where(MainMessage.conversation_id == conversation_id)
-        .order_by(MainMessage.message_index)
+        .order_by(MainMessage.message_index.desc())
         .limit(20)
     )
-    recent_messages = [m for m in result.scalars().all() if m.id != user_msg.id]
+    recent_messages = [
+        m for m in reversed(list(result.scalars().all())) if m.id != user_msg.id
+    ]
 
     result = await db.execute(
         select(MainContextMemory).where(
