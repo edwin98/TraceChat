@@ -36,6 +36,7 @@ export function MainThread() {
     openBranchTab,
     setBranch,
     setBranchMessages,
+    clearReferencedBranches,
   } = useChatStore();
 
   const [messageBranches, setMessageBranches] = useState<Record<string, BranchListItem[]>>({});
@@ -107,6 +108,7 @@ export function MainThread() {
           created_at: new Date().toISOString(),
         });
         setMessageBranches((prev) => ({ ...prev, [messageId]: [] }));
+        clearReferencedBranches();
       },
       (err) => {
         console.error("main stream error:", err);

@@ -64,7 +64,19 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   referencedBranchIds: [],
 
   setActiveConversation: (id) =>
-    set({ activeConversationId: id, mainMessages: [], branches: {}, branchMessages: {} }),
+    set({
+      activeConversationId: id,
+      activeBranchId: null,
+      branchPanelOpen: false,
+      openBranchIds: [],
+      mainMessages: [],
+      branches: {},
+      branchMessages: {},
+      streamingBranchContent: {},
+      isBranchStreaming: {},
+      selectedMainText: null,
+      referencedBranchIds: [],
+    }),
 
   setActiveBranchId: (id) => set({ activeBranchId: id }),
 
