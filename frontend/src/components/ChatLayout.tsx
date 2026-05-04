@@ -4,6 +4,7 @@ import {
   createConversation,
   getMessages,
   listConversations,
+  updateConversationTitle,
 } from "../api/conversations";
 import type { Conversation } from "../types";
 import { Sidebar } from "./Sidebar";
@@ -49,6 +50,13 @@ export function ChatLayout() {
     setMainMessages([]);
   }
 
+  async function handleRenameConversation(id: string, title: string) {
+    const updated = await updateConversationTitle(id, title);
+    setConversations((prev) =>
+      prev.map((conv) => (conv.id === id ? updated : conv)),
+    );
+  }
+
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar
@@ -56,6 +64,7 @@ export function ChatLayout() {
         activeId={activeConversationId}
         onSelect={handleSelectConversation}
         onCreate={handleCreateConversation}
+        onRename={handleRenameConversation}
       />
 
       <div className="flex flex-col flex-1 min-w-0">

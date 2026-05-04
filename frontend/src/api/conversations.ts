@@ -16,6 +16,14 @@ export async function getMessages(conversationId: string): Promise<MainMessage[]
   return res.data;
 }
 
+export async function updateConversationTitle(
+  conversationId: string,
+  title: string,
+): Promise<Conversation> {
+  const res = await api.patch(`/api/conversations/${conversationId}`, { title });
+  return res.data;
+}
+
 export async function sendMainMessage(
   conversationId: string,
   content: string,

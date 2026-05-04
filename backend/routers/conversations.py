@@ -13,6 +13,7 @@ from models import BranchThread, Conversation, MainContextMemory, MainMessage
 from schemas import (
     ConversationCreate,
     ConversationOut,
+    ConversationUpdate,
     CreateMainMessageInput,
     CreateMainMessageResponse,
     MainMessageOut,
@@ -45,6 +46,27 @@ async def get_conversation(conversation_id: str, db: AsyncSession = Depends(get_
     conv = await db.get(Conversation, conversation_id)
     if not conv:
         raise HTTPException(404, "conversation not found")
+    return conv
+
+
+@router.patch("/{conversation_id}", response_model=ConversationOut)
+async def update_conversation(
+    conversation_id: str,
+    body: ConversationUpdate,
+    db: AsyncSession = Depends(get_db),
+):
+    conv = await db.get(Conversation, conversation_id)
+    if not conv:
+        raise HTTPException(404, "conversation not found")
+
+    title = body.title.strip()
+    if not title:
+        raise HTTPException(400, "title cannot be empty")
+
+    conv.title = title[:80]
+    conv.updated_at = datetime.utcnow()
+    await db.commit()
+    await db.refresh(conv)
     return conv
 
 

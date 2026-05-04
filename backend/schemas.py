@@ -8,6 +8,10 @@ class ConversationCreate(BaseModel):
     title: str = "新对话"
 
 
+class ConversationUpdate(BaseModel):
+    title: str
+
+
 class ConversationOut(BaseModel):
     id: str
     title: str
