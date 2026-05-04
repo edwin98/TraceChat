@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { BranchListItem, MainMessage } from "../types";
+import { CopyButton } from "./CopyButton";
 
 interface Props {
   message: MainMessage;
@@ -107,6 +108,17 @@ export function MainMessageItem({ message, branches, onOpenBranch }: Props) {
           {isUser || visibleBranches.length === 0
             ? message.content
             : renderHighlightedContent(message.content, visibleBranches, onOpenBranch)}
+        </div>
+
+        <div className={`mt-1 ${isUser ? "self-end" : "self-start"}`}>
+          <CopyButton
+            text={message.content}
+            className={
+              isUser
+                ? "text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                : "text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+            }
+          />
         </div>
 
         {visibleBranches.length > 0 && (
