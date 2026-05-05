@@ -1,9 +1,15 @@
+import os
+from pathlib import Path
+
+from dotenv import set_key
 from fastapi import APIRouter
 from pydantic import BaseModel
 
 from config import settings
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
+
+ENV_PATH = Path(__file__).parent.parent / ".env"
 
 # Runtime-mutable model selections (in-memory, resets on restart; use .env for persistence)
 _current = {
@@ -38,16 +44,23 @@ PRESET_MODELS = [
     {"id": "ollama/qwen2.5", "name": "Qwen 2.5 (Ollama local)", "provider": "Ollama"},
 ]
 
+_ENV_KEY_MAP = {
+    "anthropic": "ANTHROPIC_API_KEY",
+    "openai": "OPENAI_API_KEY",
+    "gemini": "GEMINI_API_KEY",
+    "openrouter": "OPENROUTER_API_KEY",
+}
+
 
 def get_active_providers() -> list[str]:
     active = []
-    if settings.anthropic_api_key:
+    if os.environ.get("ANTHROPIC_API_KEY"):
         active.append("Anthropic")
-    if settings.openai_api_key:
+    if os.environ.get("OPENAI_API_KEY"):
         active.append("OpenAI")
-    if settings.gemini_api_key:
+    if os.environ.get("GEMINI_API_KEY"):
         active.append("Google")
-    if settings.openrouter_api_key:
+    if os.environ.get("OPENROUTER_API_KEY"):
         active.append("OpenRouter")
     active.append("Ollama")  # always available if Ollama is running locally
     return active
@@ -56,6 +69,13 @@ def get_active_providers() -> list[str]:
 class ModelUpdate(BaseModel):
     main_model: str | None = None
     branch_model: str | None = None
+
+
+class ApiKeyUpdate(BaseModel):
+    anthropic: str | None = None
+    openai: str | None = None
+    gemini: str | None = None
+    openrouter: str | None = None
 
 
 @router.get("")
@@ -75,6 +95,43 @@ async def update_settings(body: ModelUpdate):
     if body.branch_model is not None:
         _current["branch_model"] = body.branch_model
     return _current
+
+
+@router.get("/api-keys")
+async def get_api_key_status():
+    return {
+        provider: bool(os.environ.get(env_var))
+        for provider, env_var in _ENV_KEY_MAP.items()
+    }
+
+
+@router.put("/api-keys")
+async def update_api_keys(body: ApiKeyUpdate):
+    updates = {
+        "anthropic": body.anthropic,
+        "openai": body.openai,
+        "gemini": body.gemini,
+        "openrouter": body.openrouter,
+    }
+    for provider, value in updates.items():
+        if value is None:
+            continue
+        env_var = _ENV_KEY_MAP[provider]
+        if value:
+            os.environ[env_var] = value
+        else:
+            os.environ.pop(env_var, None)
+        # Persist to .env if it exists
+        if ENV_PATH.exists():
+            set_key(str(ENV_PATH), env_var, value)
+
+    return {
+        "active_providers": get_active_providers(),
+        "status": {
+            provider: bool(os.environ.get(env_var))
+            for provider, env_var in _ENV_KEY_MAP.items()
+        },
+    }
 
 
 def get_main_model() -> str:

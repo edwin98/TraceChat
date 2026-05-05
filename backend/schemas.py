@@ -8,11 +8,17 @@ class ConversationCreate(BaseModel):
     title: str = "新对话"
 
 
+class ConversationUpdate(BaseModel):
+    title: str
+
+
 class ConversationOut(BaseModel):
     id: str
     title: str
     created_at: datetime
     updated_at: datetime
+    message_count: int = 0
+    branch_count: int = 0
 
     model_config = {"from_attributes": True}
 
@@ -143,3 +149,18 @@ class BranchListItem(BaseModel):
 
 class UpdateBranchStatusInput(BaseModel):
     status: str
+
+
+class BulkUpdateBranchStatusInput(BaseModel):
+    branch_ids: list[str]
+    status: str
+
+
+class BulkBranchStatusItem(BaseModel):
+    id: str
+    status: str
+
+
+class BulkUpdateBranchStatusResponse(BaseModel):
+    updated: int
+    branches: list[BulkBranchStatusItem]

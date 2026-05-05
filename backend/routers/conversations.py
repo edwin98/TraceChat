@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from context_builder import build_main_context
@@ -13,6 +13,7 @@ from models import BranchThread, Conversation, MainContextMemory, MainMessage
 from schemas import (
     ConversationCreate,
     ConversationOut,
+    ConversationUpdate,
     CreateMainMessageInput,
     CreateMainMessageResponse,
     MainMessageOut,
@@ -37,7 +38,30 @@ async def list_conversations(db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(Conversation).order_by(Conversation.updated_at.desc())
     )
-    return result.scalars().all()
+    conversations = list(result.scalars().all())
+    output = []
+    for conv in conversations:
+        message_count = await db.scalar(
+            select(func.count(MainMessage.id)).where(
+                MainMessage.conversation_id == conv.id
+            )
+        )
+        branch_count = await db.scalar(
+            select(func.count(BranchThread.id)).where(
+                BranchThread.conversation_id == conv.id
+            )
+        )
+        output.append(
+            {
+                "id": conv.id,
+                "title": conv.title,
+                "created_at": conv.created_at,
+                "updated_at": conv.updated_at,
+                "message_count": message_count or 0,
+                "branch_count": branch_count or 0,
+            }
+        )
+    return output
 
 
 @router.get("/{conversation_id}", response_model=ConversationOut)
@@ -45,6 +69,27 @@ async def get_conversation(conversation_id: str, db: AsyncSession = Depends(get_
     conv = await db.get(Conversation, conversation_id)
     if not conv:
         raise HTTPException(404, "conversation not found")
+    return conv
+
+
+@router.patch("/{conversation_id}", response_model=ConversationOut)
+async def update_conversation(
+    conversation_id: str,
+    body: ConversationUpdate,
+    db: AsyncSession = Depends(get_db),
+):
+    conv = await db.get(Conversation, conversation_id)
+    if not conv:
+        raise HTTPException(404, "conversation not found")
+
+    title = body.title.strip()
+    if not title:
+        raise HTTPException(400, "title cannot be empty")
+
+    conv.title = title[:80]
+    conv.updated_at = datetime.utcnow()
+    await db.commit()
+    await db.refresh(conv)
     return conv
 
 
@@ -90,10 +135,12 @@ async def create_main_message(
     result = await db.execute(
         select(MainMessage)
         .where(MainMessage.conversation_id == conversation_id)
-        .order_by(MainMessage.message_index)
+        .order_by(MainMessage.message_index.desc())
         .limit(20)
     )
-    recent_messages = [m for m in result.scalars().all() if m.id != user_msg.id]
+    recent_messages = [
+        m for m in reversed(list(result.scalars().all())) if m.id != user_msg.id
+    ]
 
     result = await db.execute(
         select(MainContextMemory).where(

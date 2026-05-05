@@ -1,5 +1,5 @@
 import { api } from "./client";
-import type { BranchIntent, BranchMessage, BranchThread } from "../types";
+import type { BranchIntent, BranchMessage, BranchStatus, BranchThread } from "../types";
 
 export async function createBranch(params: {
   conversationId: string;
@@ -59,6 +59,20 @@ export async function mergeBranch(branchId: string, summary: string) {
 export async function updateBranchStatus(branchId: string, status: string) {
   const res = await api.patch(`/api/branches/${branchId}/status`, { status });
   return res.data;
+}
+
+export async function bulkUpdateBranchStatuses(
+  branchIds: string[],
+  status: BranchStatus,
+) {
+  const res = await api.patch("/api/branches/status", {
+    branch_ids: branchIds,
+    status,
+  });
+  return res.data as {
+    updated: number;
+    branches: Array<{ id: string; status: BranchStatus }>;
+  };
 }
 
 export async function getMessageBranches(messageId: string) {

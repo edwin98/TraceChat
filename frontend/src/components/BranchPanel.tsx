@@ -14,6 +14,7 @@ import { BranchSourceCard } from "./BranchSourceCard";
 import { BranchSummaryCard } from "./BranchSummaryCard";
 import { BranchComposer } from "./BranchComposer";
 import { MessageContent } from "./MessageContent";
+import { CopyButton } from "./CopyButton";
 
 const STATUS_LABELS: Record<string, string> = {
   active: "活跃",
@@ -50,6 +51,7 @@ export function BranchPanel() {
     closeBranchTab,
     openBranchTab,
     addReferencedBranch,
+    focusMainMessage,
   } = useChatStore();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -140,6 +142,10 @@ export function BranchPanel() {
   }
 
   function handleReferenceToInput(branch: BranchThread) {
+    if (!branch.summary?.trim()) {
+      window.alert("请先生成支线摘要，再引用到主线输入框。");
+      return;
+    }
     addReferencedBranch(branch.id);
   }
 
@@ -213,7 +219,7 @@ export function BranchPanel() {
 
           {/* Source card */}
           <div className="px-3 pt-3 flex-shrink-0">
-            <BranchSourceCard branch={activeBranch} />
+            <BranchSourceCard branch={activeBranch} onOpenSource={focusMainMessage} />
           </div>
 
           {/* Messages */}
@@ -231,6 +237,16 @@ export function BranchPanel() {
                   }`}
                 >
                   <MessageContent content={msg.content} />
+                  <div className={`mt-1 ${msg.role === "user" ? "text-right" : "text-left"}`}>
+                    <CopyButton
+                      text={msg.content}
+                      className={
+                        msg.role === "user"
+                          ? "text-white/70 hover:bg-white/10 hover:text-white"
+                          : "text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                      }
+                    />
+                  </div>
                 </div>
               </div>
             ))}

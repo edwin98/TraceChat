@@ -63,13 +63,18 @@ export function BranchSummaryCard({ branch, onSummarize, onMerge, onReferenceToI
           />
         </>
       ) : (
-        <button
-          onClick={handleSummarize}
-          disabled={loading}
-          className="w-full py-2 text-sm border border-dashed border-blue-300 text-blue-600 rounded-xl hover:bg-blue-50 disabled:opacity-50 transition-colors"
-        >
-          {loading ? "生成摘要中..." : "生成摘要"}
-        </button>
+        <div className="space-y-1.5">
+          <button
+            onClick={handleSummarize}
+            disabled={loading}
+            className="w-full py-2 text-sm border border-dashed border-blue-300 text-blue-600 rounded-xl hover:bg-blue-50 disabled:opacity-50 transition-colors"
+          >
+            {loading ? "生成摘要中..." : "生成摘要"}
+          </button>
+          <div className="text-center text-[11px] text-gray-400">
+            生成摘要后才可引用到主线，避免把完整支线误带入主线。
+          </div>
+        </div>
       )}
 
       {hasSummary && branch.status !== "merged" && (
