@@ -18,6 +18,8 @@ export interface ApiKeyStatus {
   openai: boolean;
   gemini: boolean;
   openrouter: boolean;
+  deepseek: boolean;
+  qwen: boolean;
 }
 
 export interface ApiKeyUpdate {
@@ -25,6 +27,8 @@ export interface ApiKeyUpdate {
   openai?: string;
   gemini?: string;
   openrouter?: string;
+  deepseek?: string;
+  qwen?: string;
 }
 
 export async function getSettings(): Promise<AppSettings> {

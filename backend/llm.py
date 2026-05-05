@@ -11,6 +11,8 @@ _key_map = {
     "OPENAI_API_KEY": settings.openai_api_key,
     "GEMINI_API_KEY": settings.gemini_api_key,
     "OPENROUTER_API_KEY": settings.openrouter_api_key,
+    "DEEPSEEK_API_KEY": settings.deepseek_api_key,
+    "DASHSCOPE_API_KEY": settings.dashscope_api_key,
 }
 for env_var, value in _key_map.items():
     if value:

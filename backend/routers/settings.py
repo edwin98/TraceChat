@@ -33,6 +33,21 @@ PRESET_MODELS = [
     # Google Gemini
     {"id": "gemini/gemini-2.0-flash", "name": "Gemini 2.0 Flash", "provider": "Google"},
     {"id": "gemini/gemini-2.5-pro", "name": "Gemini 2.5 Pro", "provider": "Google"},
+    # DeepSeek (direct)
+    {
+        "id": "deepseek/deepseek-chat",
+        "name": "DeepSeek Chat (V3)",
+        "provider": "DeepSeek",
+    },
+    {
+        "id": "deepseek/deepseek-reasoner",
+        "name": "DeepSeek Reasoner (R1)",
+        "provider": "DeepSeek",
+    },
+    # Qwen / Alibaba DashScope (direct)
+    {"id": "qwen/qwen-max", "name": "Qwen Max", "provider": "Qwen"},
+    {"id": "qwen/qwen-plus", "name": "Qwen Plus", "provider": "Qwen"},
+    {"id": "qwen/qwen-turbo", "name": "Qwen Turbo", "provider": "Qwen"},
     # OpenRouter (gateway to many providers)
     {
         "id": "openrouter/deepseek/deepseek-r1",
@@ -49,6 +64,8 @@ _ENV_KEY_MAP = {
     "openai": "OPENAI_API_KEY",
     "gemini": "GEMINI_API_KEY",
     "openrouter": "OPENROUTER_API_KEY",
+    "deepseek": "DEEPSEEK_API_KEY",
+    "qwen": "DASHSCOPE_API_KEY",
 }
 
 
@@ -62,6 +79,10 @@ def get_active_providers() -> list[str]:
         active.append("Google")
     if os.environ.get("OPENROUTER_API_KEY"):
         active.append("OpenRouter")
+    if os.environ.get("DEEPSEEK_API_KEY"):
+        active.append("DeepSeek")
+    if os.environ.get("DASHSCOPE_API_KEY"):
+        active.append("Qwen")
     active.append("Ollama")  # always available if Ollama is running locally
     return active
 
@@ -76,6 +97,8 @@ class ApiKeyUpdate(BaseModel):
     openai: str | None = None
     gemini: str | None = None
     openrouter: str | None = None
+    deepseek: str | None = None
+    qwen: str | None = None
 
 
 @router.get("")
@@ -112,6 +135,8 @@ async def update_api_keys(body: ApiKeyUpdate):
         "openai": body.openai,
         "gemini": body.gemini,
         "openrouter": body.openrouter,
+        "deepseek": body.deepseek,
+        "qwen": body.qwen,
     }
     for provider, value in updates.items():
         if value is None:

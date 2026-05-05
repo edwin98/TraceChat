@@ -32,6 +32,18 @@ const PROVIDERS: {
     hint: "aistudio.google.com → Get API Key",
   },
   {
+    key: "deepseek",
+    label: "DeepSeek",
+    placeholder: "sk-...",
+    hint: "platform.deepseek.com → API Keys",
+  },
+  {
+    key: "qwen",
+    label: "通义千问 (Qwen)",
+    placeholder: "sk-...",
+    hint: "dashscope.aliyuncs.com → API Key 管理",
+  },
+  {
     key: "openrouter",
     label: "OpenRouter",
     placeholder: "sk-or-v1-...",
@@ -43,7 +55,9 @@ const PROVIDER_COLORS: Record<string, string> = {
   Anthropic: "bg-orange-100 text-orange-700",
   OpenAI: "bg-green-100 text-green-700",
   Google: "bg-blue-100 text-blue-700",
-  OpenRouter: "bg-purple-100 text-purple-700",
+  DeepSeek: "bg-sky-100 text-sky-700",
+  Qwen: "bg-purple-100 text-purple-700",
+  OpenRouter: "bg-violet-100 text-violet-700",
   Ollama: "bg-gray-100 text-gray-600",
 };
 
@@ -62,6 +76,7 @@ function ModelDropdown({
 }) {
   const [open, setOpen] = useState(false);
   const [custom, setCustom] = useState("");
+  const [savedFlash, setSavedFlash] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -79,6 +94,13 @@ function ModelDropdown({
 
   const currentName = models.find((m) => m.id === current)?.name ?? current;
 
+  function handleSelect(id: string) {
+    onSelect(id);
+    setOpen(false);
+    setSavedFlash(true);
+    setTimeout(() => setSavedFlash(false), 1800);
+  }
+
   return (
     <div className="relative" ref={ref}>
       <button
@@ -89,7 +111,11 @@ function ModelDropdown({
         <span className="flex-1 text-left truncate text-gray-800 font-medium" title={current}>
           {currentName}
         </span>
-        <span className="ml-2 text-gray-400 text-xs">{open ? "▲" : "▼"}</span>
+        {savedFlash ? (
+          <span className="ml-2 text-xs text-green-600">已保存</span>
+        ) : (
+          <span className="ml-2 text-gray-400 text-xs">{open ? "▲" : "▼"}</span>
+        )}
       </button>
 
       {open && (
@@ -114,10 +140,7 @@ function ModelDropdown({
                   {providerModels.map((m) => (
                     <button
                       key={m.id}
-                      onClick={() => {
-                        onSelect(m.id);
-                        setOpen(false);
-                      }}
+                      onClick={() => handleSelect(m.id)}
                       className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-gray-50 ${
                         m.id === current ? "bg-blue-50 text-blue-700" : "text-gray-800"
                       } ${!isActive && provider !== "Ollama" ? "opacity-40" : ""}`}
@@ -139,8 +162,7 @@ function ModelDropdown({
                 onChange={(e) => setCustom(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && custom.trim()) {
-                    onSelect(custom.trim());
-                    setOpen(false);
+                    handleSelect(custom.trim());
                     setCustom("");
                   }
                 }}
@@ -150,8 +172,7 @@ function ModelDropdown({
               <button
                 onClick={() => {
                   if (custom.trim()) {
-                    onSelect(custom.trim());
-                    setOpen(false);
+                    handleSelect(custom.trim());
                     setCustom("");
                   }
                 }}
@@ -174,7 +195,7 @@ export function SettingsModal({ onClose, onProvidersChange }: Props) {
   const [showKey, setShowKey] = useState<Partial<Record<keyof ApiKeyStatus, boolean>>>({});
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState("");
-  const backdropRef = useRef<HTMLDivElement>(null);
+  const [errorMsg, setErrorMsg] = useState("");
 
   useEffect(() => {
     Promise.all([getSettings(), getApiKeyStatus()]).then(([s, k]) => {
@@ -182,15 +203,6 @@ export function SettingsModal({ onClose, onProvidersChange }: Props) {
       setKeyStatus(k);
     });
   }, []);
-
-  // Close on Escape
-  useEffect(() => {
-    function handler(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, [onClose]);
 
   async function handleSaveKeys() {
     const patch: Partial<Record<keyof ApiKeyStatus, string>> = {};
@@ -201,6 +213,7 @@ export function SettingsModal({ onClose, onProvidersChange }: Props) {
     if (Object.keys(patch).length === 0) return;
 
     setSaving(true);
+    setErrorMsg("");
     try {
       const res = await updateApiKeys(patch);
       setKeyStatus(res.status);
@@ -210,9 +223,35 @@ export function SettingsModal({ onClose, onProvidersChange }: Props) {
       setAppSettings((prev) =>
         prev ? { ...prev, active_providers: res.active_providers } : prev,
       );
+    } catch {
+      setErrorMsg("保存失败，请重试");
     } finally {
       setSaving(false);
       setTimeout(() => setSavedMsg(""), 2500);
+    }
+  }
+
+  async function handleClearKey(providerKey: keyof ApiKeyStatus) {
+    setSaving(true);
+    setErrorMsg("");
+    try {
+      const res = await updateApiKeys({ [providerKey]: "" });
+      setKeyStatus(res.status);
+      setInputs((prev) => {
+        const next = { ...prev };
+        delete next[providerKey];
+        return next;
+      });
+      setSavedMsg("已清除");
+      onProvidersChange?.(res.active_providers);
+      setAppSettings((prev) =>
+        prev ? { ...prev, active_providers: res.active_providers } : prev,
+      );
+    } catch {
+      setErrorMsg("操作失败，请重试");
+    } finally {
+      setSaving(false);
+      setTimeout(() => setSavedMsg(""), 2000);
     }
   }
 
@@ -224,20 +263,15 @@ export function SettingsModal({ onClose, onProvidersChange }: Props) {
   const hasInputChanges = Object.values(inputs).some((v) => v !== undefined && v !== "");
 
   return (
-    <div
-      ref={backdropRef}
-      onClick={(e) => {
-        if (e.target === backdropRef.current) onClose();
-      }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-    >
-      <div className="relative mx-4 w-full max-w-lg rounded-2xl bg-white shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="relative mx-4 w-full max-w-lg rounded-2xl bg-white shadow-2xl flex flex-col max-h-[85vh]">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4 flex-shrink-0">
           <h2 className="text-base font-semibold text-gray-900">设置</h2>
           <button
             onClick={onClose}
             className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+            title="关闭"
           >
             <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
               <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
@@ -245,12 +279,12 @@ export function SettingsModal({ onClose, onProvidersChange }: Props) {
           </button>
         </div>
 
-        <div className="max-h-[70vh] overflow-y-auto px-6 py-5">
+        <div className="overflow-y-auto px-6 py-5 flex-1">
           {/* API Key Section */}
           <section>
             <h3 className="mb-1 text-sm font-semibold text-gray-800">API 密钥</h3>
             <p className="mb-3 text-xs text-gray-500">
-              输入至少一个 provider 的 API Key 才能开始对话。密钥保存在服务器端。
+              输入至少一个 provider 的 API Key 才能开始对话。密钥保存在服务器端 .env 文件中。
             </p>
             <div className="space-y-3">
               {PROVIDERS.map((p) => {
@@ -261,15 +295,27 @@ export function SettingsModal({ onClose, onProvidersChange }: Props) {
                   <div key={p.key} className="rounded-xl border border-gray-200 p-3">
                     <div className="mb-2 flex items-center justify-between">
                       <span className="text-sm font-medium text-gray-700">{p.label}</span>
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                          isConfigured
-                            ? "bg-green-100 text-green-700"
-                            : "bg-gray-100 text-gray-500"
-                        }`}
-                      >
-                        {isConfigured ? "已配置" : "未配置"}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        {isConfigured && (
+                          <button
+                            onClick={() => handleClearKey(p.key)}
+                            disabled={saving}
+                            className="text-[11px] text-red-400 hover:text-red-600 disabled:opacity-40"
+                            title="清除此密钥"
+                          >
+                            清除
+                          </button>
+                        )}
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                            isConfigured
+                              ? "bg-green-100 text-green-700"
+                              : "bg-gray-100 text-gray-500"
+                          }`}
+                        >
+                          {isConfigured ? "已配置" : "未配置"}
+                        </span>
+                      </div>
                     </div>
                     <div className="flex gap-2">
                       <div className="relative flex-1">
@@ -315,7 +361,9 @@ export function SettingsModal({ onClose, onProvidersChange }: Props) {
             </div>
 
             <div className="mt-3 flex items-center justify-between">
-              {savedMsg ? (
+              {errorMsg ? (
+                <span className="text-xs text-red-500">{errorMsg}</span>
+              ) : savedMsg ? (
                 <span className="text-xs text-green-600">{savedMsg}</span>
               ) : (
                 <span />
@@ -334,7 +382,7 @@ export function SettingsModal({ onClose, onProvidersChange }: Props) {
           <section className="mt-6 border-t border-gray-100 pt-5">
             <h3 className="mb-1 text-sm font-semibold text-gray-800">模型配置</h3>
             <p className="mb-3 text-xs text-gray-500">
-              主线模型用于正式对话，支线模型用于临时查询，可选择较轻量的模型降低成本。
+              主线模型用于正式对话，支线模型用于临时查询，可选择较轻量的模型降低成本。模型切换即时生效。
             </p>
             {appSettings ? (
               <div className="space-y-3">
@@ -366,10 +414,16 @@ export function SettingsModal({ onClose, onProvidersChange }: Props) {
         </div>
 
         {/* Footer */}
-        <div className="border-t border-gray-100 px-6 py-3">
+        <div className="flex items-center justify-between border-t border-gray-100 px-6 py-3 flex-shrink-0">
           <p className="text-xs text-gray-400">
-            模型切换即时生效。API Key 重启后从 .env 文件读取。
+            API Key 重启后从 .env 文件读取。
           </p>
+          <button
+            onClick={onClose}
+            className="rounded-lg bg-gray-100 px-4 py-1.5 text-sm text-gray-700 hover:bg-gray-200 transition-colors"
+          >
+            完成
+          </button>
         </div>
       </div>
     </div>
